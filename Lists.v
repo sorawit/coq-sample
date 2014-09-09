@@ -268,9 +268,190 @@ Proof.
         simpl. rewrite -> IHxs. reflexivity.
 Qed.
 
+Lemma rev_snoc: forall n: nat, forall l: natlist, 
+    rev (snoc l n) = n :: (rev l).
+Proof.
+    intros n l.
+    induction l as [| x xs].
+    reflexivity.
+    simpl. rewrite -> IHxs. reflexivity.
+Qed.
+
 Theorem rev_innolutive: forall l: natlist, rev (rev l) = l.
 Proof.
         intros l.
         induction l as [| x xs].
         reflexivity.
-        simpl. rewrite <- IHxs.
+        simpl. rewrite -> rev_snoc. rewrite -> IHxs. reflexivity.
+Qed.
+
+Theorem app_assoc3: forall l1 l2 l3: natlist,
+    l1 ++ (l2 ++ l3) = (l1 ++ l2) ++ l3.
+Proof.
+    intros l1 l2 l3.
+    induction l1 as [| x xs].
+    reflexivity.
+    simpl. rewrite -> IHxs. reflexivity.
+Qed.
+Theorem app_assoc4: forall l1 l2 l3 l4: natlist,
+    l1 ++ (l2 ++ (l3 ++ l4)) = ((l1 ++ l2) ++ l3) ++ l4.
+Proof.
+    intros l1 l2 l3 l4.
+    rewrite -> app_assoc3. rewrite -> app_assoc3. reflexivity.
+Qed.
+
+Theorem snoc_append: forall (l: natlist) (n: nat), 
+    snoc l n = l ++ [n].
+Proof.
+    intros l n.
+    induction l as [| x xs].
+    reflexivity.
+    simpl. rewrite -> IHxs. reflexivity.
+Qed.
+
+Theorem distr_rev: forall l1 l2: natlist, 
+    rev (l1 ++ l2) = (rev l2) ++ (rev l1).
+Proof.
+    intros l1 l2.
+    induction l1 as [| x xs].
+    simpl. rewrite -> app_nil_end. reflexivity.
+    simpl. rewrite -> IHxs. rewrite -> snoc_append. rewrite -> snoc_append.
+    rewrite -> app_assoc3. reflexivity.
+Qed.
+
+Lemma nonzeros_app: forall l1 l2: natlist,
+    nonzeros (l1 ++ l2) = (nonzeros l1) ++ (nonzeros l2).
+Proof.
+    intros l1 l2.
+    induction l1 as [| x xs].
+    reflexivity.
+    destruct x.
+    simpl. rewrite -> IHxs. reflexivity.
+    simpl. rewrite -> IHxs. reflexivity.
+Qed.
+
+Fixpoint beq_natlist (l1 l2: natlist): bool := 
+    match l1, l2 with
+    | nil, nil => true
+    | nil, _ => false
+    | _, nil => false
+    | x :: xs, y :: ys => if beq_nat x y then beq_natlist xs ys else false
+    end.
+Example test_beq_natlist1 : (beq_natlist nil nil = true).
+Proof. reflexivity. Qed.
+Example test_beq_natlist2 : beq_natlist [1;2;3] [1;2;3] = true.
+Proof. reflexivity. Qed.
+Example test_beq_natlist3 : beq_natlist [1;2;3] [1;2;4] = false.
+Proof. reflexivity. Qed.
+
+Theorem ben_natlist_refl: forall l: natlist,
+    true = beq_natlist l l.
+Proof.
+    intros l.
+    induction l as [| x xs].
+    reflexivity.
+    simpl. rewrite -> IHxs.
+    assert (H: beq_nat x x = true).
+    induction x as [| x'].
+    reflexivity.
+    simpl. rewrite -> IHx'. reflexivity.
+    rewrite -> H. reflexivity.
+Qed.
+
+Theorem count_member_nonzero: forall s: bag,
+    ble_nat 1 (count 1 (1 :: s)) = true.
+Proof. reflexivity. Qed.
+
+Theorem ble_n_Sn: forall n: nat,
+    ble_nat n (S n) = true.
+Proof.
+    intros n.
+    induction n as [| n'].
+    reflexivity.
+    simpl. rewrite IHn'. reflexivity.
+Qed.
+
+Theorem remove_decreases_count: forall s: bag,
+    ble_nat (count 0 (remove_one 0 s)) (count 0 s) = true.
+Proof.
+    intros s.
+    induction s as [| x xs].
+    reflexivity.
+    induction x as [| x'].
+    rewrite -> ble_n_Sn. reflexivity.
+    simpl.  rewrite -> IHxs. reflexivity.
+Qed.
+
+Inductive natoption: Type :=
+| Some: nat -> natoption
+| None: natoption.
+
+Fixpoint index (n: nat) (l: natlist): natoption :=
+    match l, n with
+    | nil, _ => None
+    | x :: _, O => Some x
+    | _ :: xs, S n' => index n' xs
+    end. 
+Example test_index1 : index 0 [4;5;6;7] = Some 4.
+Proof. reflexivity. Qed.
+Example test_index2 : index 3 [4;5;6;7] = Some 7.
+Proof. reflexivity. Qed.
+Example test_index3 : index 10 [4;5;6;7] = None.
+Proof. reflexivity. Qed.
+   
+Definition option_elim (d: nat) (o: natoption): nat :=
+    match o with
+    | Some n' => n'
+    | None => d
+    end.
+
+Definition hd_opt (l: natlist): natoption :=
+    match l with 
+    | nil => None
+    | x :: _ => Some x
+    end.
+Example test_hd_opt1 : hd_opt [] = None.
+Proof. reflexivity. Qed.
+Example test_hd_opt2 : hd_opt [1] = Some 1.
+Proof. reflexivity. Qed.
+Example test_hd_opt3 : hd_opt [5;6] = Some 5.
+Proof. reflexivity. Qed.
+
+Theorem option_elim_hd: forall l: natlist, forall default: nat,
+    hd default l = option_elim default (hd_opt l).
+Proof.
+    intros l default.
+    induction l as [| x xs].
+    reflexivity.
+    reflexivity.
+Qed.
+
+Module Dictionary.
+
+Inductive dictionary: Type :=
+| empty: dictionary
+| record: nat -> nat -> dictionary -> dictionary.
+
+Definition insert (key value: nat) (d: dictionary): dictionary :=
+    record key value d.
+
+Fixpoint find (key: nat) (d: dictionary): natoption :=
+    match d with
+    | empty => None
+    | record k v d' => if beq_nat key k then Some v else find key d'
+    end.
+
+Theorem dictionary_invariant1': forall (d: dictionary) (k v: nat),
+    (find k (insert k v d)) = Some v.
+Proof.
+    intros d k v.
+    simpl.
+    assert (H: beq_nat k k = true).
+    induction k as [| k'].
+    reflexivity.
+    simpl. rewrite -> IHk'. reflexivity.
+    rewrite -> H. reflexivity.
+Qed.
+
+End Dictionary.
+End NatList.
