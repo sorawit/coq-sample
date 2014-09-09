@@ -67,13 +67,6 @@ Proof. reflexivity. Qed.
 Example test_factorial2: (factorial 5) = (mult 10 12).
 Proof. reflexivity. Qed.
 
-Notation "x + y" := (plus x y)
-        (at level 50, left associativity)
-        : nat_scope.
-Notation "x - y" := (minus x y)
-        (at level 50, left associativity)
-        : nat_scope.
-
 Fixpoint beq_nat (n m: nat): bool := 
         match n, m with
         | O, O => true
